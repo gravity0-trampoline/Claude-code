@@ -8,9 +8,7 @@
 <link rel="apple-touch-icon" href="グラゼロ教室アイコン.jpg">
 <link rel="icon" type="image/jpeg" href="グラゼロ教室アイコン.jpg">
 <style>
-  * {
-    box-sizing: border-box;
-  }
+  * { box-sizing: border-box; }
 
   body {
     margin: 0;
@@ -40,47 +38,11 @@
     letter-spacing: 0.5px;
   }
 
-  .tagline {
-    margin: 0 0 14px;
-    font-size: 17px;
-    font-weight: bold;
-    color: #ff69b4;
-  }
-
   .subtitle {
     margin: 0 0 22px;
     font-size: 15px;
     font-weight: bold;
     color: #444;
-  }
-
-  .count-display {
-    margin: 0 0 26px;
-    padding: 14px 0;
-    background: #fff1f5;
-    border-radius: 16px;
-    font-size: 16px;
-    color: #444;
-  }
-
-  .count-display.hidden {
-    display: none;
-  }
-
-  .count-display .count-number {
-    font-size: 3.2rem;
-    font-weight: bold;
-    color: #ff69b4;
-    margin: 0 2px;
-  }
-
-  .count-display .count-name {
-    display: block;
-    margin-top: 4px;
-    font-size: 1.2rem;
-    color: #4169e1;
-    font-weight: bold;
-    min-height: 18px;
   }
 
   label {
@@ -103,11 +65,6 @@
     border: 4px solid #ff69b4;
     border-radius: 16px;
     outline: none;
-    transition: border-color 0.15s;
-  }
-
-  #codeInput:focus {
-    border-color: #ff5f96;
   }
 
   #checkButton {
@@ -120,127 +77,195 @@
     border: none;
     border-radius: 16px;
     cursor: pointer;
-    transition: opacity 0.15s, transform 0.1s;
   }
 
-  #checkButton:hover {
-    opacity: 0.92;
+  #result {
+    display: none;
+    margin-top: 24px;
+    padding: 20px;
+    background: #fffafa;
+    border: 1px solid #ffdae0;
+    border-radius: 15px;
   }
 
-  #checkButton:active {
-    transform: scale(0.98);
+  #userName {
+    font-size: 1.2rem;
+    color: #4169e1;
+    font-weight: bold;
+    margin-bottom: 6px;
+  }
+
+  .result-label {
+    font-size: 0.9rem;
+    color: #7f8c8d;
+    margin-bottom: 4px;
+  }
+
+  .count-box {
+    font-size: 3.2rem;
+    font-weight: bold;
+    color: #ff69b4;
+    margin: 10px 0;
+  }
+
+  .count-box span {
+    font-size: 1.2rem;
+    margin-left: 5px;
+  }
+
+  #checkinBtn {
+    width: 100%;
+    background: #27ae60;
+    color: white;
+    border: none;
+    padding: 16px;
+    font-size: 1.2rem;
+    border-radius: 12px;
+    font-weight: bold;
+    margin-top: 16px;
+    cursor: pointer;
+  }
+
+  #msg {
+    font-weight: bold;
+    margin-top: 15px;
+    color: #27ae60;
+  }
+
+  #notice {
+    font-size: 0.9rem;
+    color: #e74c3c;
+    font-weight: bold;
+    margin-top: 10px;
+    display: none;
   }
 
   .message {
     min-height: 20px;
     margin: 16px 0 0;
     font-size: 14px;
-    line-height: 1.5;
   }
 
-  .message.success {
-    color: #2a9d56;
-  }
-
-  .message.warning {
-    color: #d6863b;
-  }
-
-  .message.error {
-    color: #d6483b;
-  }
+  .message.error { color: #d6483b; }
+  .message.warning { color: #d6863b; }
 </style>
 </head>
 <body>
   <div class="card">
     <h1>Gravity ZERO</h1>
-    <p class="tagline">ートランポリン教室ー</p>
     <p class="subtitle">チケット残り枚数</p>
 
-    <div class="count-display hidden" id="countDisplay">
-      残り回数：<span class="count-number" id="countNumber"></span>回
-      <span class="count-name" id="countName"></span>
+    <div id="login-section">
+      <label for="codeInput">会員IDを入力してください</label>
+      <input type="text" id="codeInput" inputmode="numeric" maxlength="4" autocomplete="off">
+      <button id="checkButton" type="button">残数を確認する</button>
+      <p class="message" id="message"></p>
     </div>
 
-    <label for="codeInput">会員IDを入力してください</label>
-    <input type="text" id="codeInput" inputmode="numeric" maxlength="4" autocomplete="off">
-    <button id="checkButton" type="button">残数を確認する</button>
-
-    <p class="message" id="message"></p>
+    <div id="result">
+      <div id="userName"></div>
+      <div class="result-label">現在の残数</div>
+      <div class="count-box"><span id="countDisplay">0</span><span>枚</span></div>
+      <button id="checkinBtn" type="button">1回受講する</button>
+      <p id="msg"></p>
+      <div id="notice">２人以降は画面を更新してください</div>
+    </div>
   </div>
 
 <script>
   var API_URL = "https://script.google.com/macros/s/AKfycbyXM_CR2Ai4x3LBwpQujinXDcayLgdG2jrBhYDhASGGXM6YOweBCdnYxuP_kvqzl5IdHw/exec";
+  var currentCode = "";
 
-  function checkTicket(code, callback) {
+  function callAPI(params, callback) {
     var script = document.createElement("script");
-    var callbackName = "cb_" + Date.now();
-    window[callbackName] = function(data) {
-      delete window[callbackName];
+    var cbName = "cb_" + Date.now();
+    window[cbName] = function(data) {
+      delete window[cbName];
       document.head.removeChild(script);
       callback(null, data);
     };
     script.onerror = function() {
-      delete window[callbackName];
+      delete window[cbName];
       document.head.removeChild(script);
-      callback(new Error("network error"));
+      callback(new Error("通信エラー"));
     };
-    script.src = API_URL + "?action=check&code=" + encodeURIComponent(code) + "&callback=" + callbackName;
+    script.src = API_URL + "?" + params + "&callback=" + cbName;
     document.head.appendChild(script);
   }
 
-  var countDisplayEl = document.getElementById("countDisplay");
-  var countNumberEl = document.getElementById("countNumber");
-  var countNameEl = document.getElementById("countName");
   var codeInput = document.getElementById("codeInput");
   var checkButton = document.getElementById("checkButton");
   var messageEl = document.getElementById("message");
+  var resultDiv = document.getElementById("result");
+  var loginSection = document.getElementById("login-section");
+  var userNameEl = document.getElementById("userName");
+  var countDisplayEl = document.getElementById("countDisplay");
+  var checkinBtn = document.getElementById("checkinBtn");
+  var msgEl = document.getElementById("msg");
+  var noticeEl = document.getElementById("notice");
 
-  function showMessage(text, type) {
-    messageEl.textContent = text;
-    messageEl.className = "message" + (type ? " " + type : "");
-  }
-
-  function handleCheck() {
+  checkButton.addEventListener("click", function() {
     var code = codeInput.value.trim();
-
     if (!/^\d{4}$/.test(code)) {
-      showMessage("4桁の数字を入力してください。", "error");
+      messageEl.textContent = "4桁の数字を入力してください。";
+      messageEl.className = "message error";
       return;
     }
-
+    currentCode = code;
     checkButton.disabled = true;
-    showMessage("確認しています…", "");
+    messageEl.textContent = "確認しています…";
+    messageEl.className = "message";
 
-    checkTicket(code, function(err, result) {
+    callAPI("action=check&code=" + encodeURIComponent(code), function(err, result) {
       checkButton.disabled = false;
-      if (err) {
-        showMessage("エラー: " + err.message, "error");
+      if (err || !result) {
+        messageEl.textContent = "通信エラーが発生しました。";
+        messageEl.className = "message error";
         return;
       }
       if (!result.found) {
-        showMessage("登録されていない番号です。スタッフにお問い合わせください。", "error");
+        messageEl.textContent = "登録されていない番号です。スタッフにお問い合わせください。";
+        messageEl.className = "message error";
         return;
       }
-      var remaining = result.remaining;
-      countDisplayEl.classList.remove("hidden");
-      countNumberEl.textContent = remaining;
-      countNameEl.textContent = result.name + " 選手";
-      if (remaining > 0) {
-        showMessage(result.name + " さん、残り " + remaining + " 回です。", "success");
-      } else {
-        showMessage(result.name + " さん、回数券の残りがありません。スタッフにお問い合わせください。", "warning");
-      }
-      codeInput.value = "";
-      codeInput.focus();
+      loginSection.style.display = "none";
+      resultDiv.style.display = "block";
+      userNameEl.textContent = result.name + " 選手";
+      countDisplayEl.textContent = result.remaining;
+      checkinBtn.style.display = "block";
+      checkinBtn.disabled = false;
+      checkinBtn.textContent = "1回受講する";
+      msgEl.textContent = "";
+      noticeEl.style.display = "none";
     });
-  }
+  });
 
-  checkButton.addEventListener("click", handleCheck);
+  checkinBtn.addEventListener("click", function() {
+    checkinBtn.disabled = true;
+    checkinBtn.textContent = "更新中...";
+
+    callAPI("action=checkin&code=" + encodeURIComponent(currentCode), function(err, result) {
+      if (err || !result) {
+        checkinBtn.disabled = false;
+        checkinBtn.textContent = "1回受講する";
+        msgEl.textContent = "通信エラーが発生しました。";
+        return;
+      }
+      if (!result.success) {
+        alert(result.message);
+        checkinBtn.disabled = false;
+        checkinBtn.textContent = "1回受講する";
+        return;
+      }
+      countDisplayEl.textContent = result.newBalance;
+      msgEl.textContent = "受講を受け付けました！";
+      checkinBtn.style.display = "none";
+      noticeEl.style.display = "block";
+    });
+  });
+
   codeInput.addEventListener("keydown", function(e) {
-    if (e.key === "Enter") {
-      handleCheck();
-    }
+    if (e.key === "Enter") checkButton.click();
   });
 </script>
 <script>
