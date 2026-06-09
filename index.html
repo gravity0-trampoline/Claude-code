@@ -169,34 +169,39 @@
   </div>
 
 <script>
-  const API_URL = "https://script.google.com/macros/s/AKfycbyXM_CR2Ai4x3LBwpQujinXDcayLgdG2jrBhYDhASGGXM6YOweBCdnYxuP_kvqzl5IdHw/exec";
+  var API_URL = "https://script.google.com/macros/s/AKfycbyXM_CR2Ai4x3LBwpQujinXDcayLgdG2jrBhYDhASGGXM6YOweBCdnYxuP_kvqzl5IdHw/exec";
 
-  async function checkTicket(code) {
-    const url = API_URL + "?action=check&code=" + encodeURIComponent(code);
-    const response = await fetch(url, {
-      redirect: "follow",
-      mode: "cors"
-    });
-    if (!response.ok) {
-      throw new Error("network error");
-    }
-    return response.json();
+  function checkTicket(code, callback) {
+    var script = document.createElement("script");
+    var callbackName = "cb_" + Date.now();
+    window[callbackName] = function(data) {
+      delete window[callbackName];
+      document.head.removeChild(script);
+      callback(null, data);
+    };
+    script.onerror = function() {
+      delete window[callbackName];
+      document.head.removeChild(script);
+      callback(new Error("network error"));
+    };
+    script.src = API_URL + "?action=check&code=" + encodeURIComponent(code) + "&callback=" + callbackName;
+    document.head.appendChild(script);
   }
 
-  const countDisplayEl = document.getElementById("countDisplay");
-  const countNumberEl = document.getElementById("countNumber");
-  const countNameEl = document.getElementById("countName");
-  const codeInput = document.getElementById("codeInput");
-  const checkButton = document.getElementById("checkButton");
-  const messageEl = document.getElementById("message");
+  var countDisplayEl = document.getElementById("countDisplay");
+  var countNumberEl = document.getElementById("countNumber");
+  var countNameEl = document.getElementById("countName");
+  var codeInput = document.getElementById("codeInput");
+  var checkButton = document.getElementById("checkButton");
+  var messageEl = document.getElementById("message");
 
   function showMessage(text, type) {
     messageEl.textContent = text;
     messageEl.className = "message" + (type ? " " + type : "");
   }
 
-  async function handleCheck() {
-    const code = codeInput.value.trim();
+  function handleCheck() {
+    var code = codeInput.value.trim();
 
     if (!/^\d{4}$/.test(code)) {
       showMessage("4桁の数字を入力してください。", "error");
@@ -206,39 +211,32 @@
     checkButton.disabled = true;
     showMessage("確認しています…", "");
 
-    let result;
-    try {
-      result = await checkTicket(code);
-    } catch (e) {
-      showMessage("エラー: " + e.message, "error");
+    checkTicket(code, function(err, result) {
       checkButton.disabled = false;
-      return;
-    }
-    checkButton.disabled = false;
-
-    if (!result.found) {
-      showMessage("登録されていない番号です。スタッフにお問い合わせください。", "error");
-      return;
-    }
-
-    const remaining = result.remaining;
-
-    countDisplayEl.classList.remove("hidden");
-    countNumberEl.textContent = remaining;
-    countNameEl.textContent = result.name + " さん";
-
-    if (remaining > 0) {
-      showMessage(result.name + " さん、残り " + remaining + " 回です。", "success");
-    } else {
-      showMessage(result.name + " さん、回数券の残りがありません。スタッフにお問い合わせください。", "warning");
-    }
-
-    codeInput.value = "";
-    codeInput.focus();
+      if (err) {
+        showMessage("エラー: " + err.message, "error");
+        return;
+      }
+      if (!result.found) {
+        showMessage("登録されていない番号です。スタッフにお問い合わせください。", "error");
+        return;
+      }
+      var remaining = result.remaining;
+      countDisplayEl.classList.remove("hidden");
+      countNumberEl.textContent = remaining;
+      countNameEl.textContent = result.name + " さん";
+      if (remaining > 0) {
+        showMessage(result.name + " さん、残り " + remaining + " 回です。", "success");
+      } else {
+        showMessage(result.name + " さん、回数券の残りがありません。スタッフにお問い合わせください。", "warning");
+      }
+      codeInput.value = "";
+      codeInput.focus();
+    });
   }
 
   checkButton.addEventListener("click", handleCheck);
-  codeInput.addEventListener("keydown", function (e) {
+  codeInput.addEventListener("keydown", function(e) {
     if (e.key === "Enter") {
       handleCheck();
     }
