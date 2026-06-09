@@ -171,9 +171,12 @@
 <script>
   const API_URL =const API_URL = "https://script.google.com/macros/s/AKfycbyXM_CR2Ai4x3LBwpQujinXDcayLgdG2jrBhYDhASGGXM6YOweBCdnYxuP_kvqzl5IdHw/exec";
 
-  async function checkTicket(code) {
+   async function checkTicket(code) {
     const url = API_URL + "?action=check&code=" + encodeURIComponent(code);
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      redirect: "follow",
+      mode: "cors"
+    });
     if (!response.ok) {
       throw new Error("network error");
     }
