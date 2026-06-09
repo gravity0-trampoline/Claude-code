@@ -68,17 +68,18 @@
   }
 
   .count-display .count-number {
-    font-size: 26px;
+    font-size: 3.2rem;
     font-weight: bold;
-    color: #ff5f96;
+    color: #ff69b4;
     margin: 0 2px;
   }
 
   .count-display .count-name {
     display: block;
     margin-top: 4px;
-    font-size: 13px;
-    color: #888;
+    font-size: 1.2rem;
+    color: #4169e1;
+    font-weight: bold;
     min-height: 18px;
   }
 
@@ -224,7 +225,7 @@
       var remaining = result.remaining;
       countDisplayEl.classList.remove("hidden");
       countNumberEl.textContent = remaining;
-      countNameEl.textContent = result.name + " さん";
+      countNameEl.textContent = result.name + " 選手";
       if (remaining > 0) {
         showMessage(result.name + " さん、残り " + remaining + " 回です。", "success");
       } else {
