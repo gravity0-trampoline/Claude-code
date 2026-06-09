@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gravity ZERO | デジタル回数券</title>
+<style>
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+    background: linear-gradient(160deg, #ffe3da 0%, #fff3f0 45%, #ffffff 100%);
+  }
+
+  .card {
+    width: 100%;
+    max-width: 360px;
+    background: #ffffff;
+    border-radius: 28px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+    padding: 36px 28px;
+    text-align: center;
+  }
+
+  h1 {
+    margin: 0 0 6px;
+    font-size: 30px;
+    color: #3b6fd6;
+    letter-spacing: 0.5px;
+  }
+
+  .tagline {
+    margin: 0 0 14px;
+    font-size: 17px;
+    font-weight: bold;
+    color: #ff69b4;
+  }
+
+  .subtitle {
+    margin: 0 0 22px;
+    font-size: 15px;
+    font-weight: bold;
+    color: #444;
+  }
+
+  .count-display {
+    margin: 0 0 26px;
+    padding: 14px 0;
+    background: #fff1f5;
+    border-radius: 16px;
+    font-size: 16px;
+    color: #444;
+  }
+
+  .count-display.hidden {
+    display: none;
+  }
+
+  .count-display .count-number {
+    font-size: 26px;
+    font-weight: bold;
+    color: #ff5f96;
+    margin: 0 2px;
+  }
+
+  .count-display .count-name {
+    display: block;
+    margin-top: 4px;
+    font-size: 13px;
+    color: #888;
+    min-height: 18px;
+  }
+
+  label {
+    display: block;
+    text-align: center;
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 8px;
+  }
+
+  #codeInput {
+    width: 100%;
+    padding: 14px 16px;
+    margin-bottom: 18px;
+    font-size: 20px;
+    letter-spacing: 6px;
+    text-align: center;
+    color: #333;
+    background: #ffffff;
+    border: 4px solid #ff69b4;
+    border-radius: 16px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  #codeInput:focus {
+    border-color: #ff5f96;
+  }
+
+  #checkButton {
+    width: 100%;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #ffffff;
+    background: #ff69b4;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+
+  #checkButton:hover {
+    opacity: 0.92;
+  }
+
+  #checkButton:active {
+    transform: scale(0.98);
+  }
+
+  .message {
+    min-height: 20px;
+    margin: 16px 0 0;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .message.success {
+    color: #2a9d56;
+  }
+
+  .message.warning {
+    color: #d6863b;
+  }
+
+  .message.error {
+    color: #d6483b;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Gravity ZERO</h1>
+    <p class="tagline">ートランポリン教室ー</p>
+    <p class="subtitle">チケット残り枚数</p>
+
+    <div class="count-display hidden" id="countDisplay">
+      残り回数：<span class="count-number" id="countNumber"></span>回
+      <span class="count-name" id="countName"></span>
+    </div>
+
+    <label for="codeInput">会員IDを入力してください</label>
+    <input type="text" id="codeInput" inputmode="numeric" maxlength="4" autocomplete="off">
+    <button id="checkButton" type="button">残数を確認する</button>
+
+    <p class="message" id="message"></p>
+  </div>
+
+<script>
+  // 生徒データは Google スプレッドシートで管理し、
+  // それに紐づけて公開した Google Apps Script の Web アプリ経由で読み書きする。
+  // デプロイ後に発行される URL をここに設定してください。
+  // （例）https://script.google.com/macros/s/xxxxxxxxxxxxxxxxxxxx/exec
+  const API_URL = "ここにApps Script WebアプリのURLを設定してください";
+
+  async function checkTicket(code) {
+    const url = API_URL + "?action=check&code=" + encodeURIComponent(code);
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error("network error");
+    }
+    return response.json();
+  }
+
+  const countDisplayEl = document.getElementById("countDisplay");
+  const countNumberEl = document.getElementById("countNumber");
+  const countNameEl = document.getElementById("countName");
+  const codeInput = document.getElementById("codeInput");
+  const checkButton = document.getElementById("checkButton");
+  const messageEl = document.getElementById("message");
+
+  function showMessage(text, type) {
+    messageEl.textContent = text;
+    messageEl.className = "message" + (type ? " " + type : "");
+  }
+
+  async function handleCheck() {
+    const code = codeInput.value.trim();
+
+    if (!/^\d{4}$/.test(code)) {
+      showMessage("4桁の数字を入力してください。", "error");
+      return;
+    }
+
+    checkButton.disabled = true;
+    showMessage("確認しています…", "");
+
+    let result;
+    try {
+      result = await checkTicket(code);
+    } catch (e) {
+      showMessage("通信エラーが発生しました。電波状況を確認してもう一度お試しください。", "error");
+      checkButton.disabled = false;
+      return;
+    }
+    checkButton.disabled = false;
+
+    if (!result.found) {
+      showMessage("登録されていない番号です。スタッフにお問い合わせください。", "error");
+      return;
+    }
+
+    const remaining = result.remaining;
+
+    countDisplayEl.classList.remove("hidden");
+    countNumberEl.textContent = remaining;
+    countNameEl.textContent = result.name + " さん";
+
+    if (remaining > 0) {
+      showMessage(result.name + " さん、残り " + remaining + " 回です。", "success");
+    } else {
+      showMessage(result.name + " さん、回数券の残りがありません。スタッフにお問い合わせください。", "warning");
+    }
+
+    codeInput.value = "";
+    codeInput.focus();
+  }
+
+  checkButton.addEventListener("click", handleCheck);
+  codeInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+      handleCheck();
+    }
+  });
+</script>
+</body>
+</html>
