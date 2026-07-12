@@ -19,10 +19,18 @@
     padding: 24px;
     font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
     background-color: #050510;
+  }
+
+  .bg-photo {
+    position: fixed;
+    inset: 0;
     background-image: url("./images/firework-bg.jpg");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
+    opacity: 0.35;
+    pointer-events: none;
+    z-index: -1;
   }
 
   .card {
@@ -178,6 +186,8 @@
 </style>
 </head>
 <body>
+  <div class="bg-photo" aria-hidden="true"></div>
+
   <div class="card">
     <h1>Gravity ZERO</h1>
     <p class="tagline">ートランポリン教室ー</p>
