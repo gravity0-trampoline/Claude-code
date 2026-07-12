@@ -159,6 +159,18 @@
 
   .message.error { color: #d6483b; }
   .message.warning { color: #d6863b; }
+
+  #firework-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 600;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  #firework-canvas.show { opacity: 1; }
 </style>
 </head>
 <body>
@@ -183,6 +195,8 @@
       <div id="notice">２人以降は画面を更新してください</div>
     </div>
   </div>
+
+  <canvas id="firework-canvas"></canvas>
 
 <script>
   var API_URL = "https://script.google.com/macros/s/AKfycbyXM_CR2Ai4x3LBwpQujinXDcayLgdG2jrBhYDhASGGXM6YOweBCdnYxuP_kvqzl5IdHw/exec";
@@ -252,6 +266,181 @@
     });
   });
 
+  var fireworkCanvas = document.getElementById("firework-canvas");
+  var fireworkCtx = fireworkCanvas.getContext("2d");
+  var fireworkAnimationId = null;
+  var fireworkClearTimer = null;
+  var FIREWORK_SHELL_COUNT = 6;
+  var FIREWORK_DURATION = 4200;
+  var FIREWORK_GRAVITY = 0.045;
+  var FIREWORK_COLORS = ["#ff69b4", "#4169e1", "#ffd700", "#2ecc71", "#ff8c69", "#ff4d4d", "#66d9ff", "#c084fc"];
+
+  function createFireworkShells() {
+    var w = fireworkCanvas.width;
+    var h = fireworkCanvas.height;
+    var shells = [];
+    for (var i = 0; i < FIREWORK_SHELL_COUNT; i++) {
+      var x = w * (0.12 + Math.random() * 0.76);
+      shells.push({
+        x: x,
+        y: h,
+        prevX: x,
+        prevY: h,
+        targetY: h * (0.15 + Math.random() * 0.3),
+        vy: -(7.5 + Math.random() * 3.5),
+        color: FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)],
+        delay: i * 320 + Math.random() * 260,
+        exploded: false
+      });
+    }
+    return shells;
+  }
+
+  function explodeShell(shell, particles, flashes, elapsed) {
+    shell.exploded = true;
+    flashes.push({ x: shell.x, y: shell.y, time: elapsed, color: shell.color });
+    var count = 70 + Math.floor(Math.random() * 20);
+    var angleOffset = Math.random() * Math.PI * 2;
+    for (var i = 0; i < count; i++) {
+      // 角度を360度均等に割り振り、速度を連続的にばらつかせることで
+      // 同心円の段差が出ない、隙間のない球状の爆発にする
+      var angle = angleOffset + (Math.PI * 2 * i) / count + (Math.random() - 0.5) * ((Math.PI * 2) / count) * 0.6;
+      var speed = 2.5 + Math.random() * 5.5;
+      particles.push({
+        x: shell.x,
+        y: shell.y,
+        prevX: shell.x,
+        prevY: shell.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        color: shell.color,
+        size: 1.4 + speed * 0.28,
+        life: 1,
+        decay: 0.007 + Math.random() * 0.011,
+        twinkle: Math.random() < 0.4
+      });
+    }
+  }
+
+  function hexToRgbString(hex) {
+    var h = hex.replace("#", "");
+    var r = parseInt(h.substring(0, 2), 16);
+    var g = parseInt(h.substring(2, 4), 16);
+    var b = parseInt(h.substring(4, 6), 16);
+    return r + "," + g + "," + b;
+  }
+
+  function drawFireworkFlashes(flashes, elapsed) {
+    flashes.forEach(function(f) {
+      var t = (elapsed - f.time) / 350;
+      if (t < 0 || t > 1) return;
+      var radius = 8 + t * 70;
+      var alpha = (1 - t) * 0.85;
+      var rgb = hexToRgbString(f.color);
+      // 全ての色停止点を同じalphaでフェードさせ、途中に不透明な輪が残らないようにする
+      var gradient = fireworkCtx.createRadialGradient(f.x, f.y, 0, f.x, f.y, radius);
+      gradient.addColorStop(0, "rgba(255,255,255," + alpha + ")");
+      gradient.addColorStop(0.4, "rgba(" + rgb + "," + alpha + ")");
+      gradient.addColorStop(1, "rgba(" + rgb + ",0)");
+      fireworkCtx.fillStyle = gradient;
+      fireworkCtx.beginPath();
+      fireworkCtx.arc(f.x, f.y, radius, 0, Math.PI * 2);
+      fireworkCtx.fill();
+    });
+  }
+
+  function stepFirework(timestamp, shells, particles, flashes, startRef) {
+    if (!startRef.time) startRef.time = timestamp;
+    var elapsed = timestamp - startRef.time;
+    fireworkCtx.clearRect(0, 0, fireworkCanvas.width, fireworkCanvas.height);
+
+    drawFireworkFlashes(flashes, elapsed);
+
+    shells.forEach(function(shell) {
+      if (shell.exploded) return;
+      var localElapsed = elapsed - shell.delay;
+      if (localElapsed <= 0) return;
+      shell.prevX = shell.x;
+      shell.prevY = shell.y;
+      shell.y += shell.vy;
+
+      fireworkCtx.save();
+      fireworkCtx.globalAlpha = 0.9;
+      fireworkCtx.shadowBlur = 12;
+      fireworkCtx.shadowColor = shell.color;
+      fireworkCtx.strokeStyle = shell.color;
+      fireworkCtx.lineWidth = 2.5;
+      fireworkCtx.lineCap = "round";
+      fireworkCtx.beginPath();
+      fireworkCtx.moveTo(shell.prevX, shell.prevY);
+      fireworkCtx.lineTo(shell.x, shell.y);
+      fireworkCtx.stroke();
+      fireworkCtx.fillStyle = "#ffffff";
+      fireworkCtx.beginPath();
+      fireworkCtx.arc(shell.x, shell.y, 2, 0, Math.PI * 2);
+      fireworkCtx.fill();
+      fireworkCtx.restore();
+
+      if (shell.y <= shell.targetY) {
+        explodeShell(shell, particles, flashes, elapsed);
+      }
+    });
+
+    particles.forEach(function(p) {
+      if (p.life <= 0) return;
+      p.prevX = p.x;
+      p.prevY = p.y;
+      p.vy += FIREWORK_GRAVITY;
+      p.vx *= 0.98;
+      p.vy *= 0.99;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= p.decay;
+
+      var alpha = Math.max(0, p.life);
+      if (p.twinkle && p.life < 0.55) {
+        alpha *= 0.3 + 0.7 * Math.random();
+      }
+
+      fireworkCtx.save();
+      fireworkCtx.globalAlpha = alpha;
+      fireworkCtx.shadowBlur = 8;
+      fireworkCtx.shadowColor = p.color;
+      fireworkCtx.strokeStyle = p.color;
+      fireworkCtx.lineWidth = p.size;
+      fireworkCtx.lineCap = "round";
+      fireworkCtx.beginPath();
+      fireworkCtx.moveTo(p.prevX, p.prevY);
+      fireworkCtx.lineTo(p.x, p.y);
+      fireworkCtx.stroke();
+      fireworkCtx.restore();
+    });
+
+    if (elapsed < FIREWORK_DURATION) {
+      fireworkAnimationId = requestAnimationFrame(function(ts) { stepFirework(ts, shells, particles, flashes, startRef); });
+    } else {
+      fireworkCanvas.classList.remove("show");
+      fireworkClearTimer = setTimeout(function() {
+        fireworkCtx.clearRect(0, 0, fireworkCanvas.width, fireworkCanvas.height);
+      }, 400);
+    }
+  }
+
+  function playFireworkEffect() {
+    if (fireworkAnimationId) cancelAnimationFrame(fireworkAnimationId);
+    if (fireworkClearTimer) clearTimeout(fireworkClearTimer);
+
+    fireworkCanvas.width = window.innerWidth;
+    fireworkCanvas.height = window.innerHeight;
+    var shells = createFireworkShells();
+    var particles = [];
+    var flashes = [];
+    var startRef = { time: null };
+
+    fireworkCanvas.classList.add("show");
+    fireworkAnimationId = requestAnimationFrame(function(ts) { stepFirework(ts, shells, particles, flashes, startRef); });
+  }
+
   checkinBtn.addEventListener("click", function() {
     checkinBtn.disabled = true;
     checkinBtn.textContent = "更新中...";
@@ -273,6 +462,9 @@
       msgEl.textContent = "受講を受け付けました！";
       checkinBtn.style.display = "none";
       noticeEl.style.display = "block";
+      if (result.newBalance === 0) {
+        playFireworkEffect();
+      }
     });
   });
 
