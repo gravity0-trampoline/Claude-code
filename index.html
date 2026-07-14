@@ -270,28 +270,40 @@
   var fireworkCtx = fireworkCanvas.getContext("2d");
   var fireworkAnimationId = null;
   var fireworkClearTimer = null;
-  var FIREWORK_SHELL_COUNT = 6;
-  var FIREWORK_DURATION = 4200;
+  var FIREWORK_SHELL_COUNT = 9;
+  var FIREWORK_FINALE_COUNT = 3;
+  var FIREWORK_DURATION = 5400;
   var FIREWORK_GRAVITY = 0.045;
-  var FIREWORK_COLORS = ["#ff69b4", "#4169e1", "#ffd700", "#2ecc71", "#ff8c69", "#ff4d4d", "#66d9ff", "#c084fc"];
+  var FIREWORK_COLORS = ["#ff69b4", "#4169e1", "#ffd700", "#2ecc71", "#ff8c69", "#ff4d4d", "#66d9ff", "#c084fc", "#ff3df0", "#39ff14"];
+
+  function makeFireworkShell(w, h, delay) {
+    var x = w * (0.12 + Math.random() * 0.76);
+    return {
+      x: x,
+      y: h,
+      prevX: x,
+      prevY: h,
+      targetY: h * (0.12 + Math.random() * 0.32),
+      vy: -(7.5 + Math.random() * 3.5),
+      color: FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)],
+      secondaryColor: FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)],
+      delay: delay,
+      exploded: false
+    };
+  }
 
   function createFireworkShells() {
     var w = fireworkCanvas.width;
     var h = fireworkCanvas.height;
     var shells = [];
-    for (var i = 0; i < FIREWORK_SHELL_COUNT; i++) {
-      var x = w * (0.12 + Math.random() * 0.76);
-      shells.push({
-        x: x,
-        y: h,
-        prevX: x,
-        prevY: h,
-        targetY: h * (0.15 + Math.random() * 0.3),
-        vy: -(7.5 + Math.random() * 3.5),
-        color: FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)],
-        delay: i * 320 + Math.random() * 260,
-        exploded: false
-      });
+    var mainCount = FIREWORK_SHELL_COUNT - FIREWORK_FINALE_COUNT;
+    for (var i = 0; i < mainCount; i++) {
+      shells.push(makeFireworkShell(w, h, i * 340 + Math.random() * 260));
+    }
+    // フィナーレ: 最後の数発をほぼ同時に打ち上げて締めくくる
+    var finaleBase = mainCount * 340 + 500;
+    for (var j = 0; j < FIREWORK_FINALE_COUNT; j++) {
+      shells.push(makeFireworkShell(w, h, finaleBase + Math.random() * 150));
     }
     return shells;
   }
@@ -299,7 +311,7 @@
   function explodeShell(shell, particles, flashes, elapsed) {
     shell.exploded = true;
     flashes.push({ x: shell.x, y: shell.y, time: elapsed, color: shell.color });
-    var count = 70 + Math.floor(Math.random() * 20);
+    var count = 90 + Math.floor(Math.random() * 30);
     var angleOffset = Math.random() * Math.PI * 2;
     for (var i = 0; i < count; i++) {
       // 角度を360度均等に割り振り、速度を連続的にばらつかせることで
@@ -313,7 +325,7 @@
         prevY: shell.y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        color: shell.color,
+        color: i % 2 === 0 ? shell.color : shell.secondaryColor,
         size: 1.4 + speed * 0.28,
         life: 1,
         decay: 0.007 + Math.random() * 0.011,
@@ -334,8 +346,8 @@
     flashes.forEach(function(f) {
       var t = (elapsed - f.time) / 350;
       if (t < 0 || t > 1) return;
-      var radius = 8 + t * 70;
-      var alpha = (1 - t) * 0.85;
+      var radius = 10 + t * 90;
+      var alpha = (1 - t) * 0.9;
       var rgb = hexToRgbString(f.color);
       // 全ての色停止点を同じalphaでフェードさせ、途中に不透明な輪が残らないようにする
       var gradient = fireworkCtx.createRadialGradient(f.x, f.y, 0, f.x, f.y, radius);
