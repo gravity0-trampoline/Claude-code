@@ -171,6 +171,75 @@
     transition: opacity 0.4s ease;
   }
   #firework-canvas.show { opacity: 1; }
+
+  #growth-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 10, 30, 0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 700;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  #growth-overlay.show {
+    display: flex;
+    opacity: 1;
+  }
+  .growth-card {
+    background: linear-gradient(160deg, #fff6e9 0%, #ffffff 65%);
+    border-radius: 28px;
+    padding: 40px 30px 32px;
+    max-width: 340px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    transform: scale(0.55);
+    transition: transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  #growth-overlay.show .growth-card {
+    transform: scale(1);
+  }
+  .growth-emoji {
+    font-size: 52px;
+    margin-bottom: 6px;
+    animation: growthBounce 1.2s ease-in-out infinite;
+  }
+  .growth-title {
+    font-size: 30px;
+    font-weight: 900;
+    line-height: 1.35;
+    margin: 0 0 12px;
+    background: linear-gradient(135deg, #ff69b4 0%, #ff8c69 50%, #ffd700 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 30px rgba(255, 105, 180, 0.35);
+  }
+  .growth-sub {
+    font-size: 15px;
+    color: #666;
+    line-height: 1.6;
+    margin: 0 0 26px;
+  }
+  .growth-close {
+    width: 100%;
+    background: #4169e1;
+    color: #fff;
+    border: none;
+    padding: 14px;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  @keyframes growthBounce {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-8px) scale(1.08); }
+  }
 </style>
 </head>
 <body>
@@ -197,6 +266,15 @@
   </div>
 
   <canvas id="firework-canvas"></canvas>
+
+  <div id="growth-overlay">
+    <div class="growth-card">
+      <div class="growth-emoji">🌱🎉</div>
+      <div class="growth-title">また一歩<br>成長しています！</div>
+      <p class="growth-sub">チケットを使い切りました。<br>次回のご来店もお待ちしております。</p>
+      <button class="growth-close" id="growthCloseBtn" type="button">閉じる</button>
+    </div>
+  </div>
 
 <script>
   var API_URL = "https://script.google.com/macros/s/AKfycbyXM_CR2Ai4x3LBwpQujinXDcayLgdG2jrBhYDhASGGXM6YOweBCdnYxuP_kvqzl5IdHw/exec";
@@ -453,6 +531,19 @@
     fireworkAnimationId = requestAnimationFrame(function(ts) { stepFirework(ts, shells, particles, flashes, startRef); });
   }
 
+  var growthOverlay = document.getElementById("growth-overlay");
+  var growthCloseBtn = document.getElementById("growthCloseBtn");
+
+  function showGrowthMessage() {
+    growthOverlay.classList.add("show");
+  }
+
+  function hideGrowthMessage() {
+    growthOverlay.classList.remove("show");
+  }
+
+  growthCloseBtn.addEventListener("click", hideGrowthMessage);
+
   checkinBtn.addEventListener("click", function() {
     checkinBtn.disabled = true;
     checkinBtn.textContent = "更新中...";
@@ -476,6 +567,7 @@
       noticeEl.style.display = "block";
       if (result.newBalance === 0) {
         playFireworkEffect();
+        showGrowthMessage();
       }
     });
   });
