@@ -257,7 +257,7 @@
   <div id="growth-overlay">
     <div class="growth-card">
       <div class="growth-emoji">🌱🎉</div>
-      <div class="growth-title">また一歩<br>成長しています！</div>
+      <div class="growth-title">また、一歩<br>成長しました！</div>
     </div>
   </div>
 
@@ -424,7 +424,7 @@
     });
   }
 
-  function stepFirework(timestamp, shells, particles, flashes, startRef) {
+  function stepFirework(timestamp, shells, particles, flashes, startRef, onFirstExplosion) {
     if (!startRef.time) startRef.time = timestamp;
     var elapsed = timestamp - startRef.time;
     fireworkCtx.clearRect(0, 0, fireworkCanvas.width, fireworkCanvas.height);
@@ -458,6 +458,10 @@
 
       if (shell.y <= shell.targetY) {
         explodeShell(shell, particles, flashes, elapsed);
+        if (!startRef.firstExplosionFired) {
+          startRef.firstExplosionFired = true;
+          if (onFirstExplosion) onFirstExplosion();
+        }
       }
     });
 
@@ -492,7 +496,7 @@
     });
 
     if (elapsed < FIREWORK_DURATION) {
-      fireworkAnimationId = requestAnimationFrame(function(ts) { stepFirework(ts, shells, particles, flashes, startRef); });
+      fireworkAnimationId = requestAnimationFrame(function(ts) { stepFirework(ts, shells, particles, flashes, startRef, onFirstExplosion); });
     } else {
       fireworkCanvas.classList.remove("show");
       fireworkClearTimer = setTimeout(function() {
@@ -501,7 +505,7 @@
     }
   }
 
-  function playFireworkEffect() {
+  function playFireworkEffect(onFirstExplosion) {
     if (fireworkAnimationId) cancelAnimationFrame(fireworkAnimationId);
     if (fireworkClearTimer) clearTimeout(fireworkClearTimer);
 
@@ -510,10 +514,10 @@
     var shells = createFireworkShells();
     var particles = [];
     var flashes = [];
-    var startRef = { time: null };
+    var startRef = { time: null, firstExplosionFired: false };
 
     fireworkCanvas.classList.add("show");
-    fireworkAnimationId = requestAnimationFrame(function(ts) { stepFirework(ts, shells, particles, flashes, startRef); });
+    fireworkAnimationId = requestAnimationFrame(function(ts) { stepFirework(ts, shells, particles, flashes, startRef, onFirstExplosion); });
   }
 
   var growthOverlay = document.getElementById("growth-overlay");
@@ -555,8 +559,7 @@
       checkinBtn.style.display = "none";
       noticeEl.style.display = "block";
       if (result.newBalance === 0) {
-        playFireworkEffect();
-        showGrowthMessage();
+        playFireworkEffect(showGrowthMessage);
       }
     });
   });
