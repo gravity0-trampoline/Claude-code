@@ -160,6 +160,20 @@
   .message.error { color: #d6483b; }
   .message.warning { color: #d6863b; }
 
+  #announcement {
+    display: none;
+    margin: 0 0 18px;
+    padding: 12px 14px;
+    background: #fff6e0;
+    border: 1px solid #ffe4a8;
+    border-radius: 12px;
+    color: #8a6300;
+    font-size: 14px;
+    line-height: 1.5;
+    text-align: left;
+    white-space: pre-wrap;
+  }
+
   #growth-overlay {
     position: fixed;
     inset: 0;
@@ -235,6 +249,8 @@
     <p class="tagline">ートランポリン教室ー</p>
     <p class="subtitle">チケット残り枚数</p>
 
+    <div id="announcement"></div>
+
     <div id="login-section">
       <label for="codeInput">会員IDを入力してください</label>
       <input type="text" id="codeInput" inputmode="numeric" maxlength="4" autocomplete="off">
@@ -292,6 +308,14 @@
   var checkinBtn = document.getElementById("checkinBtn");
   var msgEl = document.getElementById("msg");
   var noticeEl = document.getElementById("notice");
+  var announcementEl = document.getElementById("announcement");
+
+  callAPI("action=notice", function(err, result) {
+    if (!err && result && result.notice) {
+      announcementEl.textContent = result.notice;
+      announcementEl.style.display = "block";
+    }
+  });
 
   checkButton.addEventListener("click", function() {
     var code = codeInput.value.trim();
