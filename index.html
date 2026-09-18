@@ -293,9 +293,11 @@
     <div id="announcement"></div>
 
     <div id="login-section">
-      <label for="codeInput">会員IDを入力してください</label>
-      <input type="text" id="codeInput" inputmode="numeric" maxlength="4" autocomplete="off">
-      <button id="checkButton" type="button">残数を確認する</button>
+      <div id="manualEntryFields">
+        <label for="codeInput">会員IDを入力してください</label>
+        <input type="text" id="codeInput" inputmode="numeric" maxlength="4" autocomplete="off">
+        <button id="checkButton" type="button">残数を確認する</button>
+      </div>
       <p class="message" id="message"></p>
     </div>
 
@@ -355,6 +357,7 @@
 
   var codeInput = document.getElementById("codeInput");
   var checkButton = document.getElementById("checkButton");
+  var manualEntryFields = document.getElementById("manualEntryFields");
   var messageEl = document.getElementById("message");
   var resultDiv = document.getElementById("result");
   var loginSection = document.getElementById("login-section");
@@ -372,13 +375,9 @@
     }
   });
 
-  checkButton.addEventListener("click", function() {
-    var code = codeInput.value.trim();
-    if (!/^\d{4}$/.test(code)) {
-      messageEl.textContent = "4桁の数字を入力してください。";
-      messageEl.className = "message error";
-      return;
-    }
+  var STORED_CODE_KEY = "g0_member_code";
+
+  function runCheck(code) {
     currentCode = code;
     checkButton.disabled = true;
     messageEl.textContent = "確認しています…";
@@ -387,15 +386,21 @@
     callAPI("action=check&code=" + encodeURIComponent(code), function(err, result) {
       checkButton.disabled = false;
       if (err || !result) {
+        manualEntryFields.style.display = "block";
         messageEl.textContent = "通信エラーが発生しました。";
         messageEl.className = "message error";
         return;
       }
       if (!result.found) {
+        // 個別QR/保存済みコードが古い・無効な場合は手入力に戻す
+        try { localStorage.removeItem(STORED_CODE_KEY); } catch (e) {}
+        loginSection.style.display = "block";
+        manualEntryFields.style.display = "block";
         messageEl.textContent = "登録されていない番号です。スタッフにお問い合わせください。";
         messageEl.className = "message error";
         return;
       }
+      try { localStorage.setItem(STORED_CODE_KEY, code); } catch (e) {}
       loginSection.style.display = "none";
       resultDiv.style.display = "block";
       userNameEl.textContent = result.name + " 選手";
@@ -406,7 +411,29 @@
       msgEl.textContent = "";
       noticeEl.style.display = "none";
     });
+  }
+
+  checkButton.addEventListener("click", function() {
+    var code = codeInput.value.trim();
+    if (!/^\d{4}$/.test(code)) {
+      messageEl.textContent = "4桁の数字を入力してください。";
+      messageEl.className = "message error";
+      return;
+    }
+    runCheck(code);
   });
+
+  (function autoCheckFromQrOrStorage() {
+    var params = new URLSearchParams(location.search);
+    var qrCode = params.get("code");
+    var storedCode = null;
+    try { storedCode = localStorage.getItem(STORED_CODE_KEY); } catch (e) {}
+    var code = qrCode || storedCode;
+    if (code && /^\d{4}$/.test(code)) {
+      manualEntryFields.style.display = "none";
+      runCheck(code);
+    }
+  })();
 
   var fireworkCanvas = document.getElementById("firework-canvas");
   var fireworkCtx = fireworkCanvas.getContext("2d");
