@@ -616,11 +616,16 @@
 
   growthOverlay.addEventListener("click", hideGrowthMessage);
 
+  var checkinInFlight = false;
+
   checkinBtn.addEventListener("click", function() {
+    if (checkinInFlight) return;
+    checkinInFlight = true;
     checkinBtn.disabled = true;
     checkinBtn.textContent = "更新中...";
 
     callAPI("action=checkin&code=" + encodeURIComponent(currentCode), function(err, result) {
+      checkinInFlight = false;
       if (err || !result) {
         checkinBtn.disabled = false;
         checkinBtn.textContent = "1回受講する";
